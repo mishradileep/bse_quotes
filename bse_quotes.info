@@ -1,0 +1,12 @@
+; $Id$
+name = BSE Quotes
+description = Get BSE Quotes and display as Page or block.
+package = Finance
+version = 7.x-1.0
+core = 7.x
+; Information added by drupal.org packaging script on 2012-06-22
+version = "7.x-1.0"
+core = "7.x"
+project = "bse_quotes"
+datestamp = "1357223875"
+

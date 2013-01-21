@@ -1,0 +1,78 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the bse quotes module.
+ */
+
+function bse_quotes_schema() {
+	$schema['bse_quotes'] = array(
+			'description' => 'Subscribed Stocks Info.',
+			'fields' => array(
+					'id' => array(
+							'type' => 'serial',
+							'not null' => TRUE,
+							'size' => 'tiny',
+							'description' => 'Primary Key: Unique access ID.',
+					),
+					'stock_code' => array(
+							'type' => 'varchar',
+							'length' => 255,
+							'not null' => TRUE,
+							'default' => '',
+							'description' => 'Stock registration code.',
+					),
+					'stock_name' => array(
+							'type' => 'varchar',
+							'length' => 255,
+							'not null' => TRUE,
+							'default' => '',
+							'description' => 'Stock registartion name',
+					),
+					'status' => array(
+							'type' => 'int',
+							'not null' => TRUE,
+							'size' => 'tiny',
+							'description' => 'status of the stock quote, 1 for active, 0 for inactive. Active stock only will be displayed.',
+					),
+			),
+			'primary key' => array('id'),
+	);
+	return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function bse_quotes_install() {
+		
+	$stocks_mapping_api_url = 'http://www.stockstobuynow.in/applications/api/stockapp/quotes/mapping.json';
+		
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $stocks_mapping_api_url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+	$stocks_mapping = curl_exec($ch);
+	curl_close($ch);
+	$stocks_mapping_data = json_decode($stocks_mapping);
+	
+	$stocksArr = array();
+	$stocksStr = '';
+	foreach($stocks_mapping_data->StockMap as $stock) {
+		$stocksArr[$stock->stockCode] = $stock->stockName;
+	}
+	
+	$stock_codes = drupal_get_path('module', 'bse_quotes') . '/stockcode.txt';
+	$stocksStr = serialize($stocksArr);
+	$fp = fopen($stock_codes, 'w');
+	fwrite($fp, $stocksStr);
+	fclose($fp);
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function bse_quotes_uninstall() {
+	$stock_codes = drupal_get_path('module', 'bse_quotes') . '/stockcode.txt';
+	unlink($stock_codes);
+}
