@@ -90,4 +90,80 @@ function bse_quotes_menu() {
   );
   return $items;
 }
- 
+
+
+
+
+/**
+ * Implements hook_block_info().
+ */
+function bse_quote_block_info() {
+	$blocks = array();
+	$blocks['my_block'] = array(
+			'info' => t('My Custom Block'),
+	);
+
+	return $blocks;
+}
+
+
+
+
+/**
+ * Implements hook_block_view().
+ */
+function bse_quote_block_view($delta='') {
+	$block = array();
+
+	switch($delta) {
+		case 'my_block' :
+			$block['content'] = my_block_view();
+			break;
+	}
+
+	return $block;
+}
+
+/**
+ * Custom function to assemble renderable array for block content.
+ * Returns a renderable array with the block content.
+ * @return
+ *   returns a renderable array of block content.
+ */
+function my_block_view() {
+	$block = array();
+
+	// Capture the image file path and form into HTML with attributes
+	$image_file = file_load(variable_get('block_image_fid', ''));
+	$image_path = '';
+
+	if (isset($image_file->uri)) {
+		$image_path = $image_file->uri;
+	}
+
+	$image = theme_image(array(
+			'path' => ($image_path),
+			'alt' => t('Image description here.'),
+			'title' => t('This is our block image.'),
+			'attributes' => array('class' => 'class_name'),
+	));
+
+	// Capture WYSIWYG text from the variable
+	$text = variable_get('text_variable', '');
+
+	// Block output in HTML with div wrapper
+	$block = array(
+			'image' => array(
+					'#prefix' => '<div class="class_name">',
+					'#type' => 'markup',
+					'#markup' => $image,
+			),
+			'message' => array(
+					'#type' => 'markup',
+					'#markup' => $text,
+					'#suffix' => '</div>',
+			),
+	);
+
+	return $block;
+}
