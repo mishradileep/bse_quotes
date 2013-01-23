@@ -10,7 +10,7 @@ function bse_quotes_config_form() {
 			'#type' => 'textfield',
 			'#title' => 'Stock Code',
 			'#description' => 'Type stock name and select your desired stock. It will be automatically converted into stock code.',
-			'#autocomplete_path' => 'bse_quotes_names/autocomplete',
+			'#autocomplete_path' => 'admin/config/services/bse_quotes/bse_quotes_names/autocomplete',
 			'#required' => TRUE
 	);
 	$form['bse_quote_weight'] = array(
@@ -92,41 +92,61 @@ function bse_quotes_config_form_submit($form_id,&$form_values) {
 function bse_stocks_list() {
 	//Create a list of headers for your Html table (see Drupal 7 docs for theme_table here
 	$header = array(
-			'nid' => t('title'),
-			'title' => t('nid'),
-			'type' => t('type'),
-			'created' => t('created'),
+			'stock_code' => t('Stock Code'),
+			'stock_name' => t('Stock Title'),
 			'status' => t('status'),
 	);
 	
 	//Create the Sql query. This uses various parts of Drupal 7's new DBTNG database abstraction layer.
 	
-	$query = db_select('node', 'n')
+	$query = db_select('bse_quotes', 'bse_quotes')
 	->condition('status', 1) //Only published nodes, change condition as it suits you
 	->extend('PagerDefault')  //Pager Extender
-	->limit(2)    //2 results per page
+	->limit(20)    //2 results per page
 	->extend('TableSort')  //Sorting Extender
 	->orderByHeader($header)//Field to sort on is picked from $header
-	->fields('n', array(
-			'nid',
-			'title',
-			'type',
-			'created',
+	->fields('bse_quotes', array(
+			'id',
+			'stock_code',
+			'stock_name',
 			'status',
 	));
 	
 	$results = $query
 	->execute();
 	
+	
+	$form['options'] = array(
+			'#type' => 'fieldset',
+			'#title' => t('Update options'),
+			'#attributes' => array('class' => array('container-inline')),
+	);
+	$options = array();
+	foreach (module_invoke_all('bse_quotes_operations') as $operation => $array) {
+		$options[$operation] = $array['label'];
+	}
+	pr($options);
+	$form['options']['operation'] = array(
+			'#type' => 'select',
+			'#title' => t('Operation'),
+			'#title_display' => 'invisible',
+			'#options' => $options,
+			'#default_value' => 'unblock',
+	);
+	$options = array();
+	$form['options']['submit'] = array(
+			'#type' => 'submit',
+			'#value' => t('Update'),
+	);
+	
+	
 	$rows = array();
 	
-	foreach ($results as $node) {
-		$rows[$node->nid] = array(
-				'title' => l($node->title, 'node/' . $node->nid),
-				'nid' => $node->nid,
-				'type' => $node->type,
-				'created' => format_date($node->created),
-				'status' => $node->status,
+	foreach ($results as $stock) {
+		$rows[$stock->id] = array(
+				'stock_code' => l($stock->stock_code, 'node/' . $stock->id),
+				'stock_name' => $stock->stock_name,
+				'status' => ($stock->status)?'Published':'Unpublished',
 				//'#attributes' => array('class' => array('article-row')),
 		);
 	}

@@ -167,3 +167,68 @@ function my_block_view() {
 
 	return $block;
 }
+
+
+/**
+ * Implements of hook_exchange_links_operations().
+ */
+function bse_quotes_bse_quotes_operations($form = array(), $form_state = array()) {
+	$operations = array(
+			'publish' => array(
+					'label' => t('Publish the selected Quotes'),
+					'callback' => 'bse_quotes_bse_quotes_operations_publish',
+			),
+			'unpublish' => array(
+					'label' => t('Unpublish the selected Quotes'),
+					'callback' => 'bse_quotes_bse_quotes_operations_unpublish',
+			),
+			'delete' => array(
+					'label' => t('Delete the selected Quotes'),
+					'callback' => 'bse_quotes_bse_quotes_operations_delete',
+			),
+	);
+	return $operations;
+}
+
+/**
+ * Callback function for admin mass publishing quotes.
+ */
+function bse_quotes_bse_quotes_operations_publish($quotes) {
+	pr($quotes);
+	die("Published");
+	db_update('bse_quotes')
+	->fields(
+	array(
+	'status' => 1,
+	)
+	)
+	->condition('id', $quotes, 'IN')
+	->execute();
+}
+
+/**
+ * Callback function for admin mass unpublishing links.
+ */
+function bse_quotes_bse_quotes_operations_unpublish($quotes) {
+	pr($quotes);
+	die("Unpublished");
+	db_update('bse_quotes')
+	->fields(
+	array(
+	'status' => 0,
+	)
+	)
+	->condition('id', $quotes, 'IN')
+	->execute();
+}
+/**
+ * Callback function for admin mass deleting links.
+ */
+function bse_quotes_bse_quotes_operations_delete($quotes) {
+	pr($quotes);
+	die("Delete");
+	db_delete('bse_quotes')
+	->condition('id', $quotes, 'IN')
+	->execute();
+	drupal_set_message(t('The links has been deleted.'));
+}
