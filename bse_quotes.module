@@ -98,9 +98,10 @@ function bse_quotes_menu() {
  * Implements hook_block_info().
  */
 function bse_quote_block_info() {
+	die('asdasd');
 	$blocks = array();
-	$blocks['my_block'] = array(
-			'info' => t('My Custom Block'),
+	$blocks['bse_quote_block'] = array(
+			'info' => t('BSE Quote Block'),
 	);
 
 	return $blocks;
@@ -116,58 +117,17 @@ function bse_quote_block_view($delta='') {
 	$block = array();
 
 	switch($delta) {
-		case 'my_block' :
-			$block['content'] = my_block_view();
+		case 'bse_quote_block' :
+			$block['content'] = bse_quote_block();
 			break;
 	}
 
 	return $block;
 }
 
-/**
- * Custom function to assemble renderable array for block content.
- * Returns a renderable array with the block content.
- * @return
- *   returns a renderable array of block content.
- */
-function my_block_view() {
-	$block = array();
-
-	// Capture the image file path and form into HTML with attributes
-	$image_file = file_load(variable_get('block_image_fid', ''));
-	$image_path = '';
-
-	if (isset($image_file->uri)) {
-		$image_path = $image_file->uri;
-	}
-
-	$image = theme_image(array(
-			'path' => ($image_path),
-			'alt' => t('Image description here.'),
-			'title' => t('This is our block image.'),
-			'attributes' => array('class' => 'class_name'),
-	));
-
-	// Capture WYSIWYG text from the variable
-	$text = variable_get('text_variable', '');
-
-	// Block output in HTML with div wrapper
-	$block = array(
-			'image' => array(
-					'#prefix' => '<div class="class_name">',
-					'#type' => 'markup',
-					'#markup' => $image,
-			),
-			'message' => array(
-					'#type' => 'markup',
-					'#markup' => $text,
-					'#suffix' => '</div>',
-			),
-	);
-
-	return $block;
+function bse_quote_block() {
+	return 'This is Block';
 }
-
 
 /**
  * Implements of hook_exchange_links_operations().
@@ -194,8 +154,6 @@ function bse_quotes_bse_quotes_operations($form = array(), $form_state = array()
  * Callback function for admin mass publishing quotes.
  */
 function bse_quotes_bse_quotes_operations_publish($quotes) {
-	pr($quotes);
-	die("Published");
 	db_update('bse_quotes')
 	->fields(
 	array(
@@ -210,8 +168,6 @@ function bse_quotes_bse_quotes_operations_publish($quotes) {
  * Callback function for admin mass unpublishing links.
  */
 function bse_quotes_bse_quotes_operations_unpublish($quotes) {
-	pr($quotes);
-	die("Unpublished");
 	db_update('bse_quotes')
 	->fields(
 	array(
@@ -225,10 +181,14 @@ function bse_quotes_bse_quotes_operations_unpublish($quotes) {
  * Callback function for admin mass deleting links.
  */
 function bse_quotes_bse_quotes_operations_delete($quotes) {
-	pr($quotes);
-	die("Delete");
 	db_delete('bse_quotes')
 	->condition('id', $quotes, 'IN')
 	->execute();
 	drupal_set_message(t('The links has been deleted.'));
+}
+
+function pr($arr) {
+	print "<pre>";
+	print_r($arr);
+	print "</pre>";
 }

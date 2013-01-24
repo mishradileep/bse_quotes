@@ -92,15 +92,15 @@ function bse_quotes_config_form_submit($form_id,&$form_values) {
 function bse_stocks_list() {
 	//Create a list of headers for your Html table (see Drupal 7 docs for theme_table here
 	$header = array(
-			'stock_code' => t('Stock Code'),
-			'stock_name' => t('Stock Title'),
-			'status' => t('status'),
+		'stock_code' => array('data' => t('Stock Code'), 'field' => 'bse_quotes.stock_code', 'sort' => 'asc'),
+		'stock_name' => array('data' => t('Stock Title'), 'field' => 'bse_quotes.stock_name', 'sort' => 'asc'),
+		'status' => t('status'),
 	);
 	
 	//Create the Sql query. This uses various parts of Drupal 7's new DBTNG database abstraction layer.
 	
 	$query = db_select('bse_quotes', 'bse_quotes')
-	->condition('status', 1) //Only published nodes, change condition as it suits you
+	//->condition('status', 1) //Only published nodes, change condition as it suits you
 	->extend('PagerDefault')  //Pager Extender
 	->limit(20)    //2 results per page
 	->extend('TableSort')  //Sorting Extender
@@ -125,7 +125,7 @@ function bse_stocks_list() {
 	foreach (module_invoke_all('bse_quotes_operations') as $operation => $array) {
 		$options[$operation] = $array['label'];
 	}
-	pr($options);
+	
 	$form['options']['operation'] = array(
 			'#type' => 'select',
 			'#title' => t('Operation'),
@@ -144,13 +144,13 @@ function bse_stocks_list() {
 	
 	foreach ($results as $stock) {
 		$rows[$stock->id] = array(
-				'stock_code' => l($stock->stock_code, 'node/' . $stock->id),
+				'stock_code' => $stock->stock_code,
 				'stock_name' => $stock->stock_name,
 				'status' => ($stock->status)?'Published':'Unpublished',
 				//'#attributes' => array('class' => array('article-row')),
 		);
 	}
-	$form['registration_table'] = array(
+	$form['bse_quotes_table'] = array(
 			'#type' => 'tableselect',
 			'#header' => $header,
 			'#options' => $rows,
@@ -160,12 +160,43 @@ function bse_stocks_list() {
 			'#suffix' => '</td></tr>',
 			'#attributes' => array('class' => array('article-row')),
 	);
-	$form['submit'] = array('#type' => 'submit',
-			'#value' => t('Register'),
-			'#disabled' => FALSE,
-			'#prefix' => '<tr><td>',
-			'#suffix' => '</td></tr></table>');
 	$form['pager'] = array('#markup' => theme('pager'));
-	//pr($form);
+
 	return $form;
+}
+
+/**
+ * Submit the exchange_links_overview administration update form.
+ */
+function bse_stocks_list_submit($form, &$form_state) {
+	
+  $operations = module_invoke_all('bse_quotes_operations', $form, $form_state);
+  $operation = $operations[$form_state['values']['operation']];
+  
+  
+  // Filter out unchecked links.
+  $quotes = array_filter($form_state['values']['bse_quotes_table']);
+  if ($function = $operation['callback']) {
+    // Add in callback arguments if present.
+    if (isset($operation['callback arguments'])) {
+      $args = array_merge(array($quotes), $operation['callback arguments']);
+    }
+    else {
+      $args = array($quotes);
+    }
+    call_user_func_array($function, $args);
+    drupal_set_message(t('The update has been performed.'));
+  }
+}
+
+/**
+ * Implementation of exchange_links_overview_validate.
+ */
+function bse_stocks_list_validate($form, &$form_state) {
+  
+  $form_state['values']['bse_quotes_table'] = array_filter($form_state['values']['bse_quotes_table']);
+  
+  if (count($form_state['values']['bse_quotes_table']) == 0) {
+    form_set_error('', t('No quote selected.'));
+  }
 }
