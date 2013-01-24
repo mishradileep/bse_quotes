@@ -43,7 +43,7 @@ function bse_quotes_permission() {
       'title' => t('Administer bse quotes'),
       'description' => t('Allows a user to configure and administrate BSE Quotes.'),
     ),
-    'use exchange links' => array(
+    'use bse quotes' => array(
       'title' => t('Use bse quotes'),
       'description' => t('Allows user to use bse quotes.'),
     ),
@@ -71,7 +71,8 @@ function bse_quotes_menu() {
   	'file' => 'bse_quotes.admin.inc',
   );
   $items['admin/config/services/bse_quotes'] = array(
-  		'title' => 'BSE Configured Quotes',
+  		'title' => 'BSE Quotes',
+  		'description' => 'Configure the BSE stock quote.',
   		'page callback' => 'drupal_get_form',
   		'page arguments' => array('bse_stocks_list'),
   		'access arguments' => array('administer bse quotes'),
@@ -88,6 +89,14 @@ function bse_quotes_menu() {
   		'weight' => 30,
   		'file' => 'bse_quotes.admin.inc',
   );
+  $items['bse_quotes'] = array(
+  		'title' => 'BSE Quotes',
+  		'page callback' => 'bse_quotes',
+  		'access arguments' => array('use bse quotes'),
+  		'type' => MENU_NORMAL_ITEM,
+  		'weight' => 30,
+  		'file' => 'bse_quotes.pages.inc',
+  );
   return $items;
 }
 
@@ -97,8 +106,7 @@ function bse_quotes_menu() {
 /**
  * Implements hook_block_info().
  */
-function bse_quote_block_info() {
-	die('asdasd');
+function bse_quotes_block_info() {
 	$blocks = array();
 	$blocks['bse_quote_block'] = array(
 			'info' => t('BSE Quote Block'),
@@ -113,11 +121,12 @@ function bse_quote_block_info() {
 /**
  * Implements hook_block_view().
  */
-function bse_quote_block_view($delta='') {
+function bse_quotes_block_view($delta='') {
 	$block = array();
 
 	switch($delta) {
 		case 'bse_quote_block' :
+			$block['subject'] = t('BSE Quotes');
 			$block['content'] = bse_quote_block();
 			break;
 	}
@@ -126,7 +135,41 @@ function bse_quote_block_view($delta='') {
 }
 
 function bse_quote_block() {
-	return 'This is Block';
+	$items = array();
+	
+	$query = db_select('bse_quotes', 'bse_quotes')
+	->condition('status', 1)
+	->range(0, 20)
+	->fields('bse_quotes', array(
+			'id',
+			'stock_code',
+			'stock_name',
+			'status',
+	));
+	
+	$results = $query->execute();
+	
+	while($record = $results->fetchAssoc()) {
+		$stock_quote[$record['stock_code']] = get_stock_quote($record['stock_code']);
+	}
+
+	return theme('block-quote', array('quotes' => $stock_quote));
+}
+
+function bse_quotes_theme() {
+	$module_path = drupal_get_path('module', 'bse_quotes');
+  $base = array('path' => "$module_path/theme",);
+	return array('block-quote' => $base + 
+		array(
+				'template' => 'block-quote',  //leave off .tpl.php
+				'variables' => array('items' => NULL,),
+    		),   
+			'page-quote' => $base +
+			array(
+					'template' => 'page-quote',  //leave off .tpl.php
+					'variables' => array('items' => NULL,),
+			),
+  ); 
 }
 
 /**
@@ -191,4 +234,19 @@ function pr($arr) {
 	print "<pre>";
 	print_r($arr);
 	print "</pre>";
+}
+
+
+function get_stock_quote($stock_code) {
+	$cache_name = 'stock_quote_'.$stock_code;
+	if ($cache = cache_get($cache_name)) {
+		$quotes = $cache->data;
+	}
+	else {
+		$request_uri = 'http://www.stockstobuynow.in/applications/api/stockapp/quotes/'.$stock_code.'.json';
+		$stock_quote = drupal_http_request($request_uri);
+		$quotes = drupal_json_decode($stock_quote->data);
+		cache_set($cache_name, $quotes, 'cache');
+	}
+	return $quotes;
 }
