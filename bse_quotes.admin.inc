@@ -1,10 +1,12 @@
 <?php
-
 /**
  * @file
  * Important administration functions for the BSE Quotes module.
  */
 
+/**
+ * config form for BSE quote
+ */
 function bse_quotes_config_form() {
   $form['bse_quote_code'] = array(
       '#type' => 'textfield',
@@ -26,7 +28,12 @@ function bse_quotes_config_form() {
   return $form;
 }
 
-function _bse_quote_names_autocomplete($string) {
+/**
+ * Autocomplete functionality stock quote
+ */
+function _bse_quote_names_autocomplete($input_string) {
+  $string = strtoupper(check_plain($input_string));
+
   $stock_mapping = _get_stock_quotes_mapping_array();
   $matches = array();
   foreach ($stock_mapping as $stock_code => $stock_name) {
@@ -37,16 +44,21 @@ function _bse_quote_names_autocomplete($string) {
   drupal_json_output($matches);
 }
 
+/**
+ * Config form validation
+ */
 function bse_quotes_config_form_validate($form_id, &$form_values) {
   $stock_mapping = _get_stock_quotes_mapping_array();
-  if (!array_key_exists($form_values['values']['bse_quote_code'], $stock_mapping)) {
+  $input_bse_quote_code = filter_xss($form_values['values']['bse_quote_code']);
+
+  if (!array_key_exists($input_bse_quote_code, $stock_mapping)) {
     form_set_error('bse_quote_code', t('This stock code does not exist. Please select stock from autocomplete options only.'));
   }
 
   /* Check if code does not exist */
   $query = db_select('bse_quotes', 'bse');
   $query
-  ->condition('bse.stock_code', $form_values['values']['bse_quote_code'], '=')
+  ->condition('bse.stock_code', $input_bse_quote_code, '=')
   ->fields('bse', array('id'))
   ->range(0, 5);
   $result = $query->execute();
@@ -55,6 +67,12 @@ function bse_quotes_config_form_validate($form_id, &$form_values) {
   }
 }
 
+/**
+ * Get script name mapping with stock code
+ * Read stockcode.txt file and return unserialized array
+ * @return
+ *   Array
+ */
 function _get_stock_quotes_mapping_array() {
   $my_data = &drupal_static(__FUNCTION__);
 
@@ -73,14 +91,19 @@ function _get_stock_quotes_mapping_array() {
   return unserialize($stock_mapping);
 }
 
+/**
+ * Sumbit BSE Quote config form
+ * Save configured stock data in database
+ */
 function bse_quotes_config_form_submit($form_id, &$form_values) {
 
   $stock_mapping = _get_stock_quotes_mapping_array();
+  $input_bse_quote_code = filter_xss($form_values['values']['bse_quote_code']);
 
   $bse_quote_id = db_insert('bse_quotes')
   ->fields(array(
-      'stock_code' => $form_values['values']['bse_quote_code'],
-      'stock_name' => $stock_mapping[$form_values['values']['bse_quote_code']],
+      'stock_code' => $input_bse_quote_code,
+      'stock_name' => $stock_mapping[$input_bse_quote_code],
       'status' => 1,
   ))
   ->execute();
@@ -88,9 +111,12 @@ function bse_quotes_config_form_submit($form_id, &$form_values) {
   drupal_set_message(t('Stock added.'), 'status');
 }
 
-
+/**
+ * List BSE stock code in Tableselect to perform admin oprtaions like
+ * Publish, Unpublish, Delete Etc
+ */
 function bse_stocks_list() {
-  //Create a list of headers for your Html table (see Drupal 7 docs for theme_table here
+  //Create a list of headers for your Html table (see Drupal 7 docs for theme_table here)
   $header = array(
       'stock_code' => array('data' => t('Stock Code'), 'field' => 'bse_quotes.stock_code', 'sort' => 'asc'),
       'stock_name' => array('data' => t('Stock Title'), 'field' => 'bse_quotes.stock_name', 'sort' => 'asc'),
@@ -98,11 +124,9 @@ function bse_stocks_list() {
   );
 
   //Create the Sql query. This uses various parts of Drupal 7's new DBTNG database abstraction layer.
-
   $query = db_select('bse_quotes', 'bse_quotes')
-  //->condition('status', 1) //Only published nodes, change condition as it suits you
   ->extend('PagerDefault')  //Pager Extender
-  ->limit(20)    //2 results per page
+  ->limit(20)    //results per page
   ->extend('TableSort')  //Sorting Extender
   ->orderByHeader($header)//Field to sort on is picked from $header
   ->fields('bse_quotes', array(
@@ -111,10 +135,8 @@ function bse_stocks_list() {
       'stock_name',
       'status',
   ));
-
   $results = $query
   ->execute();
-
 
   $form['options'] = array(
       '#type' => 'fieldset',
@@ -144,8 +166,8 @@ function bse_stocks_list() {
 
   foreach ($results as $stock) {
     $rows[$stock->id] = array(
-        'stock_code' => $stock->stock_code,
-        'stock_name' => $stock->stock_name,
+        'stock_code' => check_plain($stock->stock_code),
+        'stock_name' => check_plain($stock->stock_name),
         'status' => ($stock->status)?'Published':'Unpublished',
         //'#attributes' => array('class' => array('article-row')),
     );
@@ -154,8 +176,6 @@ function bse_stocks_list() {
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $rows,
-      //'#js_select' => FALSE,
-      //'#multiple' => TRUE,
       '#prefix' => '<table><tr><td>',
       '#suffix' => '</td></tr>',
       '#attributes' => array('class' => array('article-row')),
@@ -166,13 +186,12 @@ function bse_stocks_list() {
 }
 
 /**
- * Submit the exchange_links_overview administration update form.
+ * Submit the bse_stocks_list administration update form.
  */
 function bse_stocks_list_submit($form, &$form_state) {
 
   $operations = module_invoke_all('bse_quotes_operations', $form, $form_state);
   $operation = $operations[$form_state['values']['operation']];
-
 
   // Filter out unchecked links.
   $quotes = array_filter($form_state['values']['bse_quotes_table']);
@@ -190,7 +209,7 @@ function bse_stocks_list_submit($form, &$form_state) {
 }
 
 /**
- * Implementation of exchange_links_overview_validate.
+ * Implementation of HOOK_VALIDATE for bse_stocks_list.
  */
 function bse_stocks_list_validate($form, &$form_state) {
 

@@ -1,9 +1,13 @@
-<?php foreach($quotes as $quote) { ?>
+<?php 
+if($quotes):
+foreach($quotes as $quote) { ?>
 <table width="100%" border="1" cellspacing="5" cellpadding="5">
 
 	<tr>
 		<td colspan="6"><h3>
-				<b><?php print $quote['Scrip'][0]['scripName']?></b> ( <?php print $quote['Scrip'][0]['last']?> )
+				<b><?php print $quote['Scrip'][0]['scripName']?> </b> (
+				<?php print $quote['Scrip'][0]['last']?>
+				)
 			</h3></td>
 	</tr>
 	<tr>
@@ -26,4 +30,10 @@
 	<?php }?>
 
 </table>
-<?php } ?>
+<?php }
+else:
+print "No Stock configured to display.";
+if(user_access('administer bse quotes')) {
+  print "Configure Quotes from " . l('admin/config/services/bse_quotes/config_quotes', 'admin/config/services/bse_quotes/config_quotes') . " to see the stock here.";
+}
+endif;

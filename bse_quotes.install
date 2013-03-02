@@ -4,6 +4,9 @@
  * Install, update and uninstall functions for the bse quotes module.
  */
 
+/**
+ * Implements hook_schema().
+ */
 function bse_quotes_schema() {
   $schema['bse_quotes'] = array(
       'description' => 'Subscribed Stocks Info.',
@@ -45,12 +48,8 @@ function bse_quotes_schema() {
  */
 function bse_quotes_install() {
   $stocks_mapping_api_url = 'http://www.stockstobuynow.in/applications/api/stockapp/quotes/mapping.json';
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $stocks_mapping_api_url);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-  $stocks_mapping = curl_exec($ch);
-  curl_close($ch);
-  $stocks_mapping_data = json_decode($stocks_mapping);
+  $stocks_mapping = drupal_http_request($stocks_mapping_api_url);
+  $stocks_mapping_data = json_decode($stocks_mapping->data);
   $stocks_arr = array();
   $stocks_str = '';
   foreach ($stocks_mapping_data->StockMap as $stock) {

@@ -1,4 +1,4 @@
-
+<?php if($quotes): ?>
 <table width="100%" border="1" cellspacing="5" cellpadding="5">
 	<tr>
 		<th>Script Title</th>
@@ -11,3 +11,6 @@
 	</tr>
 	<?php } ?>
 </table>
+<?php else:
+print "No Stock configured to display. Configure Quotes from " . l('admin/config/services/bse_quotes/config_quotes', 'admin/config/services/bse_quotes/config_quotes') . " to see the stock here.";
+endif;

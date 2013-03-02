@@ -1,35 +1,21 @@
 <?php
 
 /**
+ * @file
+ * Enables the administrator to config BSE quotes in a block and page.
+ */
+
+
+/**
  * Implements hook_help().
  */
 function bse_quotes_help($path, $arg) {
   if ($path == 'admin/help#bse_quotes') {
     if (current_path() != 'admin/help/bse_quotes') {
-      // Because system_modules() executes hook_help() for each module to 'test'
-      // if they will return anything, but not actually display it, we want to
-      // return a TRUE value if this is not actually the help page.
       return TRUE;
     }
     $output = '<h3>' . t('About') . '</h3>';
-    $output .= '<p>' . t('It will allow users to share their links with the site administrator.') . '</p>';
-    $output .= '<h3>' . t('Settings') . '</h3>';
-    $output .= '<dl>';
-    $output .= '<dt>' . t('<strong>Rules:</strong>') . '</dt>';
-    $output .= '<dd>' . t('Write your own linking rules.<br/><b>Example:</b> Mysite.com related websites only! (Other none Mysite.com related websites will be removed) We are constantly looking for new perm Mysite.com link exchanges.') . '</dd>';
-    $output .= '<dt>' . t('<strong>Linkback:</strong>') . '</dt>';
-    $output .= '<dd>' . t('Write your own linking rules.') . '</dd>';
-    $output .= '<dt>' . t('<strong>Min PageRank&trade;:</strong>') . '</dt>';
-    $output .= '<dd>' . t('Min PageRank&trade; value of link which can be added to you site.<br/><b>Example:</b> 5') . '</dd>';
-    $output .= '<dt>' . t('<strong>URL:</strong>') . '</dt>';
-    $output .= '<dd>' . t('URL of your site.<br/><b>Example:</b> http://wwww.yoursite.com') . '</dd>';
-    $output .= '<dt>' . t('<strong>Site Title:</strong>') . '</dt>';
-    $output .= '<dd>' . t('Title of your site.<br/><b>Example:</b> Video Sharing site') . '</dd>';
-    $output .= '<dt>' . t('<strong>Site Description:</strong>') . '</dt>';
-    $output .= '<dd>' . t('Description of your site.<br/><b>Example:</b> This a video sharing platform where users can share videos.') . '</dd>';
-    $output .= '<dt>' . t('<strong>HTML Code:</strong>') . '</dt>';
-    $output .= '<dd>' . t('HTML code of your site link.<br/><b>Example:</b> &lt;a href="http://www.yoursite.com" title="Site Title"&gt;Site Title&lt;/a&gt;') . '</dd>';
-    $output .= '</dl>';
+    $output .= '<p>' . t('It will allow users to administrator to display current BSE stock quotes. This module creates a page(' . l('BSE Quotes', 'bse_quotes') . ') and a block(BSE Quote Block) to display quotes.') . '</p>';
     return $output;
   }
 }
@@ -100,9 +86,6 @@ function bse_quotes_menu() {
   return $items;
 }
 
-
-
-
 /**
  * Implements hook_block_info().
  */
@@ -115,9 +98,6 @@ function bse_quotes_block_info() {
   return $blocks;
 }
 
-
-
-
 /**
  * Implements hook_block_view().
  */
@@ -127,14 +107,17 @@ function bse_quotes_block_view($delta='') {
   switch ($delta) {
     case 'bse_quote_block' :
       $block['subject'] = t('BSE Quotes');
-      $block['content'] = bse_quote_block();
+      $block['content'] = bse_quotes_quote_block();
       break;
   }
 
   return $block;
 }
 
-function bse_quote_block() {
+/**
+ * Generate BSE Quote block
+ */
+function bse_quotes_quote_block() {
   $items = array();
 
   $query = db_select('bse_quotes', 'bse_quotes')
@@ -148,14 +131,17 @@ function bse_quote_block() {
   ));
 
   $results = $query->execute();
-
+  $stock_quote = array();
   while ($record = $results->fetchAssoc()) {
-    $stock_quote[$record['stock_code']] = get_stock_quote($record['stock_code']);
+    $stock_quote[$record['stock_code']] = _bse_quotes_get_stock_quote($record['stock_code']);
   }
 
   return theme('block-quote', array('quotes' => $stock_quote));
 }
 
+/**
+ * Implements hook_theme().
+ */
 function bse_quotes_theme() {
   $module_path = drupal_get_path('module', 'bse_quotes');
   $base = array('path' => "$module_path/theme", );
@@ -163,7 +149,7 @@ function bse_quotes_theme() {
       array(
           'template' => 'block-quote',
           'variables' => array('items' => NULL, ),
-          ),
+      ),
       'page-quote' => $base +
       array(
           'template' => 'page-quote',  //leave off .tpl.php
@@ -173,7 +159,7 @@ function bse_quotes_theme() {
 }
 
 /**
- * Implements of hook_exchange_links_operations().
+ * Implements of hook_bse_quotes_operations().
  */
 function bse_quotes_bse_quotes_operations($form = array(), $form_state = array()) {
   $operations = array(
@@ -220,6 +206,7 @@ function bse_quotes_bse_quotes_operations_unpublish($quotes) {
   ->condition('id', $quotes, 'IN')
   ->execute();
 }
+
 /**
  * Callback function for admin mass deleting links.
  */
@@ -230,14 +217,12 @@ function bse_quotes_bse_quotes_operations_delete($quotes) {
   drupal_set_message(t('The links has been deleted.'));
 }
 
-function pr($arr) {
-  print "<pre>";
-  print_r($arr);
-  print "</pre>";
-}
-
-
-function get_stock_quote($stock_code) {
+/**
+ * Return an array of Stock Quote for given Stock Code
+ * @param (int) $stock_code
+ * @return array
+ */
+function _bse_quotes_get_stock_quote($stock_code) {
   $cache_name = 'stock_quote_' . $stock_code;
   if ($cache = cache_get($cache_name)) {
     $quotes = $cache->data;

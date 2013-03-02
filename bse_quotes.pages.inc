@@ -4,6 +4,9 @@
  * Important user functions for the BSE Quotes module.
  */
 
+/**
+ * Generate content for BSE Quote Page
+ */
 function bse_quotes() {
 
   $items = array();
@@ -19,9 +22,9 @@ function bse_quotes() {
   ));
 
   $results = $query->execute();
-
+  $stock_quote = array();
   while ($record = $results->fetchAssoc()) {
-    $stock_quote[$record['stock_code']] = get_stock_quote($record['stock_code']);
+    $stock_quote[$record['stock_code']] = _bse_quotes_get_stock_quote($record['stock_code']);
   }
 
   return theme('page-quote', array('quotes' => $stock_quote));
